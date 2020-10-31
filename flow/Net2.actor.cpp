@@ -302,6 +302,11 @@ public:
 	}
 };
 
+void net2AsioWriteHandler(BindPromise &p, const boost::system::error_code& error, size_t bytesTransferredIn, size_t * bytesTransferred) {
+	*bytesTransferred = bytesTransferredIn;
+	p(error, *bytesTransferred);
+}
+
 struct SendBufferIterator {
 	typedef boost::asio::const_buffer value_type;
 	typedef std::forward_iterator_tag iterator_category;
@@ -445,13 +450,14 @@ public:
 		return sent;
 	}
 
-	virtual Future<Void> asyncWrite(SendBuffer const* data, int limit) {
+	virtual Future<Void> asyncWrite(SendBuffer const* data, size_t * bytesTransferred, int limit) {
 		boost::system::error_code err;
 		++g_net2->countWrites;
 
 		BindPromise p("N2_WriteProbeError", id);
 		auto f = p.getFuture();
-		boost::asio::async_write(socket, boost::iterator_range<SendBufferIterator>(SendBufferIterator(data, limit), SendBufferIterator()), std::move(p) );
+		boost::asio::async_write(socket, boost::iterator_range<SendBufferIterator>(SendBufferIterator(data, limit), SendBufferIterator()),
+			boost::bind(net2AsioWriteHandler, std::move(p), boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred, bytesTransferred));
 		return f;
 	}
 
@@ -785,8 +791,7 @@ public:
 		++g_net2->countWriteProbes;
 		BindPromise p("N2_WriteProbeError", id);
 		auto f = p.getFuture();
-		// ssl_sock.async_wait(boost::asio::socket_base::wait_write, std::move(p) );
-		ssl_sock.async_write_some( boost::asio::null_buffers(), std::move(p) );
+		socket.async_write_some( boost::asio::null_buffers(), std::move(p) );
 		return f;
 	}
 
@@ -795,8 +800,7 @@ public:
 		++g_net2->countReadProbes;
 		BindPromise p("N2_ReadProbeError", id);
 		auto f = p.getFuture();
-		// ssl_sock.async_wait(boost::asio::socket_base::wait_read, std::move(p) );
-		ssl_sock.async_read_some( boost::asio::null_buffers(), std::move(p) );
+		socket.async_read_some( boost::asio::null_buffers(), std::move(p) );
 		return f;
 	}
 
@@ -813,7 +817,6 @@ public:
 				++g_net2->countWouldBlock;
 				return 0;
 			}
-			printf("read error.  closing connection: %s\n", strerror(err.value()));
 			onReadError(err);
 			throw connection_failed();
 		}
@@ -848,7 +851,6 @@ public:
 				++g_net2->countWouldBlock;
 				return 0;
 			}
-			printf("error.  closing connection: %s\n", strerror(err.value()));
 			onWriteError(err);
 			throw connection_failed();
 		}
@@ -857,14 +859,13 @@ public:
 		return sent;
 	}
 
-
-	virtual Future<Void> asyncWrite(SendBuffer const* data, int limit) {
+	virtual Future<Void> asyncWrite(SendBuffer const* data, size_t * bytesTransferred, int limit) {
 		boost::system::error_code err;
 		++g_net2->countWrites;
 
 		BindPromise p("N2_WriteProbeError", id);
 		auto f = p.getFuture();
-		boost::asio::async_write(ssl_sock, boost::iterator_range<SendBufferIterator>(SendBufferIterator(data, limit), SendBufferIterator()), std::move(p) );
+		boost::asio::async_write(ssl_sock, boost::iterator_range<SendBufferIterator>(SendBufferIterator(data, limit), SendBufferIterator()), boost::bind(net2AsioWriteHandler, std::move(p), boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred, bytesTransferred));
 		return f;
 	}
 

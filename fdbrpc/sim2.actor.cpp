@@ -273,8 +273,8 @@ struct Sim2Conn : IConnection, ReferenceCounted<Sim2Conn> {
 		return toSend;
 	}
 
-	virtual Future<Void> asyncWrite( SendBuffer const* buffer, int limit) {
-		return whenWritten(this, buffer, limit);
+	virtual Future<Void> asyncWrite( SendBuffer const* buffer, size_t * bytesTransferred, int limit) {
+		return whenWritten(this, buffer, bytesTransferred, limit);
 	}
 
 	// Returns the network address and port of the other end of the connection.  In the case of an incoming connection, this may not
@@ -378,16 +378,17 @@ private:
 		}
 	}
 
-	ACTOR static Future<Void> whenWritten( Sim2Conn* self, SendBuffer const* buffer, int limit) {
+	ACTOR static Future<Void> whenWritten( Sim2Conn* self, SendBuffer const* buffer, size_t * bytesTransferred, int limit) {
+
 		try {
-			limit = buffer->unsentBytesInQueue(limit);
 			state int bufferOffset = 0;
 			loop {
 				state int sent = self->write_impl(buffer, bufferOffset, limit);
 				limit -= sent;
+				(*bytesTransferred) += sent;
 				bufferOffset += sent;
 				wait(whenWritable(self));
-				if (limit == 0) {
+				if (sent == 0 || limit == 0) {
 					return Void();
 				}
 			}
