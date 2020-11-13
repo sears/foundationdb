@@ -59,6 +59,8 @@ RUN cd /opt/ && curl -L https://github.com/facebook/rocksdb/archive/v6.10.1.tar.
     echo "d573d2f15cdda883714f7e0bc87b814a8d4a53a82edde558f08f940e905541ee  rocksdb.tar.gz" > rocksdb-sha.txt &&\
     sha256sum -c rocksdb-sha.txt && tar xf rocksdb.tar.gz && rm -rf rocksdb.tar.gz rocksdb-sha.txt
 
+RUN cd /opt/ && curl -L https://github.com/manticoresoftware/manticoresearch/raw/master/misc/junit/ctest2junit.xsl -o ctest2junit.xsl
+
 # Setting this environment variable switches from OpenSSL to BoringSSL
 #ENV OPENSSL_ROOT_DIR=/opt/boringssl
 
