@@ -77,7 +77,7 @@ RUN cd /opt &&\
 RUN cd /opt/boringssl &&\
 	for f in crypto/fipsmodule/rand/fork_detect_test.cc \
 	         include/openssl/bn.h \
-			 ssl/test/bssl_shim.cc ; do \
+		 ssl/test/bssl_shim.cc ; do \
 		perl -p -i -e 's/#include <inttypes.h>/#define __STDC_FORMAT_MACROS 1\n#include <inttypes.h>/g;' $f ; \
 	done &&\
 	perl -p -i -e 's/-Werror/-Werror -fPIC/' CMakeLists.txt &&\
