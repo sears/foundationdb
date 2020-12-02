@@ -1,4 +1,4 @@
-FROM centos:7
+FROM oraclelinux:6
 
 # Install dependencies for developer tools, bindings,\
 # documentation, actorcompiler, and packaging tools\
